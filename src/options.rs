@@ -7,7 +7,7 @@ use errors::ProgramArgumentError;
 const LISTEN_FLAG_SHORT: &str = "s";
 const LISTEN_FLAG_LONG: &str = "słuchajcie";
 const LISTEN_FLAG_DESC: &str = "przełączcie w tryb słuchania";
-const HELP_FLAG_SHORT: &str = "p";
+const HELP_FLAG_SHORT: &str = "h";
 const HELP_FLAG_LONG: &str = "pomóżcie";
 const HELP_FLAG_DESC: &str = "wyświetla ten tekst";
 const PORT_OPTION_SHORT: &str = "p";
@@ -66,13 +66,13 @@ pub fn parse_arguments( options: &Options,arguments: Vec<String>) -> Result<Mode
     };
 
     if matches.opt_present(LISTEN_FLAG_SHORT) {
+        Ok(Mode::Listen(port))
+    } else {
         let host: Host = match matches.opt_str(HOST_OPTION_SHORT) {
             Some(host) => Host(host),
             None => return Err(ProgramArgumentError::LackingHostError)
         };
         Ok(Mode::Send(host, port))
-    } else {
-        Ok(Mode::Listen(port))
     }
 }
 
