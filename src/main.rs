@@ -12,7 +12,7 @@ use options::Mode;
 #[derive(Debug)]
 pub struct Host(String);
 #[derive(Debug)]
-pub struct Port(String);
+pub struct Port(u16);
 
 fn main() {
     let options: Options = prepare_options();

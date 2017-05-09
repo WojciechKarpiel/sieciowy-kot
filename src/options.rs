@@ -56,7 +56,12 @@ pub fn parse_arguments( options: &Options,arguments: Vec<String>) -> Result<Mode
     }
 
     let port: Port = match  matches.opt_str(PORT_OPTION_SHORT) {
-        Some(port) =>  Port(port),
+        Some(port) =>  {
+           match port.parse::<u16>() {
+               Ok(port) => Port(port),
+               Err(err) => return Err(ProgramArgumentError::from(err)),
+           } 
+        },
         None => return Err(ProgramArgumentError::LackingPortError)
     };
 
