@@ -9,6 +9,8 @@ use options::parse_arguments;
 use options::print_help;
 use options::Mode;
 use options::Protocol;
+use options::ConnectionOptions;
+use options::ProgramToExec;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::net::UdpSocket;
@@ -28,8 +30,8 @@ fn main() {
     let arguments: Vec<String> = std::env::args().collect();
     let program_name = arguments[0].clone();
     match parse_arguments(&options, arguments) {
-        Ok(Mode::Listen(protocol, port)) => listen(protocol, port),
-        Ok(Mode::Send(protocol, host, port)) => send(protocol, host, port),
+        Ok(Mode::Listen(connection_options)) => listen(connection_options),
+        Ok(Mode::Send(host, connction_options)) => send(host, connction_options),
         Ok(Mode::Help) => print_help(&program_name, &options),
         Err(error) => {
             writeln!(&mut std::io::stderr(), "{}", error).unwrap();
@@ -38,17 +40,17 @@ fn main() {
     }
 }
 
-fn listen(protocol: Protocol, port: Port) {
+fn listen(ConnectionOptions(port, protocol, program_to_exec) : ConnectionOptions) {
     match protocol {
-        Protocol::TCP => with_error_handed(|| listen_tcp(port)),
-        Protocol::UDP => with_error_handed(|| listen_udp(port)),
+        Protocol::TCP => with_error_handed(|| listen_tcp(port, program_to_exec)),
+        Protocol::UDP => with_error_handed(|| listen_udp(port, program_to_exec)),
     }
 }
 
-fn send(protocol: Protocol, host: Host, port: Port){
+fn send(host: Host, ConnectionOptions(port, protocol, program_to_exec) : ConnectionOptions) {
     match protocol {
-        Protocol::TCP => with_error_handed(|| send_tcp(host, port)),
-        Protocol::UDP => with_error_handed(|| send_udp(host, port)),
+        Protocol::TCP => with_error_handed(|| send_tcp(host, port, program_to_exec)),
+        Protocol::UDP => with_error_handed(|| send_udp(host, port, program_to_exec)),
     }
 }
 
@@ -61,20 +63,20 @@ fn with_error_handed<F>(procedure: F)
     }
 }
 
-fn listen_tcp(Port(port): Port)  -> Result<(), Error> {
+fn listen_tcp(Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec)  -> Result<(), Error> {
     let listener = TcpListener::bind(("localhost", port))?;
     let (mut input_stream, _) = listener.accept()?;
     std::io::copy(&mut input_stream, &mut std::io::stdout())?;
     Ok(())
 }
 
-fn send_tcp(Host(host): Host, Port(port): Port) -> Result<(), Error> {
+fn send_tcp(Host(host): Host, Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec) -> Result<(), Error> {
     let mut output_stream = TcpStream::connect((&host as &str, port))?;
 	std::io::copy(&mut std::io::stdin(), &mut output_stream)?;
 	Ok(())
 }
 
-fn listen_udp(Port(port): Port) -> Result<(), Error> {
+fn listen_udp(Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec) -> Result<(), Error> {
     let socket = UdpSocket::bind(("localhost", port))?;
     let mut buf = [0; BUF_SIZE];
     loop{
@@ -83,7 +85,7 @@ fn listen_udp(Port(port): Port) -> Result<(), Error> {
     }
 }
 
-fn send_udp(Host(host): Host, Port(port): Port) -> Result<(), Error> {
+fn send_udp(Host(host): Host, Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec) -> Result<(), Error> {
     let socket = UdpSocket::bind(("localhost", 0))?;
     let mut buf = [0; BUF_SIZE];
     loop {

@@ -21,11 +21,21 @@ const HOST_OPTION_SHORT: &str = "g";
 const HOST_OPTION_LONG: &str = "gość";
 const HOST_OPTION_DESC: &str = "wysyłajcie do gościa";
 const HOST_OPTION_HINT: &str = "127.0.0.1";
+const EXEC_OPTION_SHORT: &str = "u";
+const EXEC_OPTION_LONG: &str = "uruchomcie";
+const EXEC_OPTION_DESC: &str = "uruchomcie program";
+const EXEC_OPTION_HINT: &str = "fish";
+
+#[derive(Debug)]
+pub struct ConnectionOptions(pub Port, pub Protocol, pub ProgramToExec);
+
+#[derive(Debug)]
+pub struct ProgramToExec(pub Option<String>);
 
 #[derive(Debug)]
 pub enum Mode {
-    Listen(Protocol, Port),
-    Send(Protocol, Host, Port),
+    Listen(ConnectionOptions),
+    Send(Host, ConnectionOptions),
     Help,
 }
 
@@ -55,6 +65,10 @@ pub fn prepare_options() -> Options {
                    HOST_OPTION_LONG,
                    HOST_OPTION_DESC,
                    HOST_OPTION_HINT);
+    options.optopt(EXEC_OPTION_SHORT,
+                   EXEC_OPTION_LONG,
+                   EXEC_OPTION_DESC,
+                   EXEC_OPTION_HINT);
     options                
 }
 
@@ -84,14 +98,17 @@ pub fn parse_arguments( options: &Options,arguments: Vec<String>) -> Result<Mode
         None => return Err(ProgramArgumentError::LackingPortError)
     };
 
+    let program_to_exec: ProgramToExec = ProgramToExec(matches.opt_str(EXEC_OPTION_SHORT));
+    let connection_options: ConnectionOptions = ConnectionOptions(port, protocol, program_to_exec);
+
     if matches.opt_present(LISTEN_FLAG_SHORT) {
-        Ok(Mode::Listen(protocol, port))
+        Ok(Mode::Listen(connection_options))
     } else {
         let host: Host = match matches.opt_str(HOST_OPTION_SHORT) {
             Some(host) => Host(host),
             None => return Err(ProgramArgumentError::LackingHostError)
         };
-        Ok(Mode::Send(protocol, host, port))
+        Ok(Mode::Send(host, connection_options))
     }
 }
 
