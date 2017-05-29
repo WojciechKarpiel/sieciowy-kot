@@ -9,4 +9,6 @@ Opcje:
     -p, --port 1234     słuchajcie/wysyłajcie na port
     -g, --gość 127.0.0.1
                         wysyłajcie do gościa
+    -w, --uruchomcie fish
+                        uruchomcie program
 ```
