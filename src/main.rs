@@ -17,6 +17,8 @@ use std::net::UdpSocket;
 use std::io::Error;
 use std::io::Write;
 use std::io::Read;
+use std::process::Command;
+use std::process::Stdio;
 
 #[derive(Debug)]
 pub struct Host(String);
@@ -24,6 +26,12 @@ pub struct Host(String);
 pub struct Port(u16);
 
 const BUF_SIZE : usize = 100;
+
+/*
+DOZRO:
+* dwukierunkowe strumienie
+* wspólna obsługa uruchamiania procesów
+*/
 
 fn main() {
     let options: Options = prepare_options();
@@ -42,14 +50,14 @@ fn main() {
 
 fn listen(ConnectionOptions(port, protocol, program_to_exec) : ConnectionOptions) {
     match protocol {
-        Protocol::TCP => with_error_handed(|| listen_tcp(port)),
+        Protocol::TCP => with_error_handed(|| listen_tcp(port, program_to_exec)),
         Protocol::UDP => with_error_handed(|| listen_udp(port)),
     }
 }
 
 fn send(host: Host, ConnectionOptions(port, protocol, program_to_exec) : ConnectionOptions) {
     match protocol {
-        Protocol::TCP => with_error_handed(|| send_tcp(host, port)),
+        Protocol::TCP => with_error_handed(|| send_tcp(host, port, program_to_exec)),
         Protocol::UDP => with_error_handed(|| send_udp(host, port)),
     }
 }
@@ -63,16 +71,32 @@ fn with_error_handed<F>(procedure: F)
     }
 }
 
-fn listen_tcp(Port(port): Port)  -> Result<(), Error> {
+fn listen_tcp(Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec)  -> Result<(), Error> {
     let listener = TcpListener::bind(("localhost", port))?;
     let (mut tcp_stream, _) = listener.accept()?;
-    std::io::copy(&mut tcp_stream, &mut std::io::stdout())?;
+    match program_to_exec {
+        Some(program_name) => {
+            let process =  Command::new(program_name)
+                .stdout(Stdio::piped())
+                .spawn()?;
+            std::io::copy(&mut process.stdout.unwrap(), &mut tcp_stream)?;
+        }
+        None => {std::io::copy(&mut tcp_stream, &mut std::io::stdout())?;},
+    }
     Ok(())
 }
 
-fn send_tcp(Host(host): Host, Port(port): Port) -> Result<(), Error> {
+fn send_tcp(Host(host): Host, Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec) -> Result<(), Error> {
     let mut output_stream = TcpStream::connect((&host as &str, port))?;
-	std::io::copy(&mut std::io::stdin(), &mut output_stream)?;
+    match program_to_exec {
+        Some(program_name) =>  {
+            let process =  Command::new(program_name)
+                .stdout(Stdio::piped())
+                .spawn()?;
+            std::io::copy(&mut process.stdout.unwrap(), &mut output_stream)?;
+            },
+	    None => {std::io::copy(&mut std::io::stdin(), &mut output_stream)?;},
+    };
 	Ok(())
 }
 
