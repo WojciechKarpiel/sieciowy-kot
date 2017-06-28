@@ -1,3 +1,5 @@
+Demo: http://showterm.io/5aab9daf2c01280d7ee67
+
 ```
 > sk --pomóżcie
 Sposób użycia: sk [OPCJE]

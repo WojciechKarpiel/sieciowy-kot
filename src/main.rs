@@ -89,10 +89,13 @@ fn listen_tcp(Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec)  
 fn send_tcp(Host(host): Host, Port(port): Port, ProgramToExec(program_to_exec): ProgramToExec) -> Result<(), Error> {
     let mut output_stream = TcpStream::connect((&host as &str, port))?;
     match program_to_exec {
-        Some(program_name) =>  {
-            let process =  Command::new(program_name)
-                .stdout(Stdio::piped())
-                .spawn()?;
+        Some(program_name_args) =>  {
+            let mut iterator = program_name_args.split_whitespace().map(|s| s.to_string());
+            let program_name: String = iterator.next().unwrap();            
+            let mut command: Command = Command::new(program_name);
+            let command = iterator.fold(&mut command,
+                |command_acc, arg| command_acc.arg(arg));
+            let process = command.stdout(Stdio::piped()).spawn()?;
             std::io::copy(&mut process.stdout.unwrap(), &mut output_stream)?;
             },
 	    None => {std::io::copy(&mut std::io::stdin(), &mut output_stream)?;},
